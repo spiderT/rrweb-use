@@ -1,0 +1,13 @@
+.video-container {
+  width: 1000px;
+  height: 500px;
+}
+
+.ellipsis {
+  display: inline-block;
+  width: 500px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  -o-text-overflow: ellipsis;
+}

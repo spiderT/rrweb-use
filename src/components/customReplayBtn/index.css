@@ -1,0 +1,15 @@
+.container-wrap {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+}
+
+.json-container {
+  width: 700px !important;
+}
+
+.play-btn {
+  position: absolute;
+  left: 50%;
+  top: 100px;
+}

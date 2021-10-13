@@ -1,0 +1,74 @@
+.bling-in {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 100%;
+  animation: blings-3 1.5s linear infinite;
+  position: absolute;
+  left: -5px;
+  top: -15px;
+  background-color: rgba(255, 0, 0, 1);
+}
+.bling {
+  display: inline-block;
+  position: relative;
+  margin-left: 10px;
+  width: 40px;
+}
+
+@keyframes blings-3 {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+@-moz-keyframes blings-3 {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+@-webkit-keyframes blings-3 {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+@-o-keyframes blings-3 {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
