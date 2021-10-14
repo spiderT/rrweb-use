@@ -99,6 +99,12 @@ export default () => {
           ],
         },
       });
+      // 允许用户在回放的 UI 中进行交互
+      // !!! 没有生效？？
+      replayer.enableInteract();
+
+      // 禁用用户在回放的 UI 中进行交互
+      // replayer.disableInteract();
     }, 1000);
   };
 

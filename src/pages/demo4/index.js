@@ -93,6 +93,12 @@ const Demo1 = () => {
   return (
     <div>
       <h1>抽样策略</h1>
+      <ul>
+        <li>mousemove：鼠标移动事件</li>
+        <li>mouseInteraction：鼠标交互事件</li>
+        <li>scroll：滚动事件的触发频率</li>
+        <li>input：输入事件的录制时机</li>
+      </ul>
       <RecordBtn startRecord={startRecord} endRecord={endRecord} />
       <Form {...layout} form={form} name="control-hooks" onFinish={onFinish}>
         <Form.Item name="note" label="Note" rules={[{ required: true }]}>

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button, Modal, message } from "antd";
 import rrwebPlayer from "rrweb-player";
-import { unpack } from "rrweb";
+import { unpack, getReplayConsolePlugin } from "rrweb";
 import { RightCircleTwoTone } from "@ant-design/icons";
 import AceEditor from "react-ace";
 import { jsonParse } from "../../utils";
@@ -33,6 +33,11 @@ export default (props) => {
         width: 600,
         height: 400,
         unpackFn: unpack,
+        plugins: [
+          getReplayConsolePlugin({
+            level: ["info", "log", "warn", "error"],
+          }),
+        ],
       },
     });
   };
