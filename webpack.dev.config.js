@@ -1,9 +1,9 @@
-const path = require("path")
-const HtmlWebpackPlugin = require("html-webpack-plugin")
+const path = require("path");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 module.exports = {
-  mode: 'development',
-  devtool: 'inline-source-map',
+  mode: "development",
+  devtool: "inline-source-map",
   entry: "./src/app.js",
   output: {
     filename: "js/[name].bundle.[contenthash:6].js",
@@ -12,7 +12,7 @@ module.exports = {
   },
   devServer: {
     static: {
-      directory: path.join(__dirname, 'dist'),
+      directory: path.join(__dirname, "dist"),
     },
     compress: true,
     port: 9000,
@@ -28,7 +28,7 @@ module.exports = {
     rules: [
       {
         test: /\.css$/i,
-        use: ['style-loader', 'css-loader'],
+        use: ["style-loader", "css-loader"],
       },
       {
         test: /\.(png|svg|jpg|jpeg|gif)$/i,
@@ -41,14 +41,21 @@ module.exports = {
         test: /\.js$/,
         exclude: /(node_modules)/,
         use: {
-          loader: 'babel-loader',
+          loader: "babel-loader",
           options: {
-            presets: ['@babel/preset-env', '@babel/preset-react'],
-            plugins: ['styled-jsx/babel'],
-            cacheDirectory: true
-          }
-        }
-      }
+            presets: ["@babel/preset-env", "@babel/preset-react"],
+            plugins: ["styled-jsx/babel"],
+            cacheDirectory: true,
+          },
+        },
+      },
+      {
+        test: /\.(mp4|webm|ogg|mp3|wav|flac|aac|m4a)$/i,
+        loader: "url-loader",
+        options: {
+          esModule: false,
+        },
+      },
     ],
   },
-}
+};

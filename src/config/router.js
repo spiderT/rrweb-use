@@ -40,6 +40,18 @@ export const MENU = [
         path: "/demo5",
         component: lazyLoader("demo5"),
       },
+      {
+        title: "录制视频&音频",
+        key: "录制视频&音频",
+        path: "/demo6",
+        component: lazyLoader("demo6"),
+      },
+      {
+        title: "链接跳转",
+        key: "链接跳转",
+        path: "/demo7",
+        component: lazyLoader("demo7"),
+      },
     ],
   },
   {

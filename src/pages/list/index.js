@@ -66,7 +66,6 @@ export default () => {
   const [jsonVisible, setJsonVisible] = useState(false);
   const [jsonData, setJsonData] = useState(null);
   let timer = null;
-  let replayer = null;
 
   const list = useLiveQuery(() => db.rrwebLists.toArray());
 
@@ -84,7 +83,7 @@ export default () => {
     }
 
     timer = setTimeout(() => {
-      replayer = new rrwebPlayer({
+      const replayer = new rrwebPlayer({
         target: videoRef.current, // 自定义 DOM 元素
         // 配置项
         props: {
@@ -100,11 +99,8 @@ export default () => {
         },
       });
       // 允许用户在回放的 UI 中进行交互
-      // !!! 没有生效？？
-      replayer.enableInteract();
-
-      // 禁用用户在回放的 UI 中进行交互
-      // replayer.disableInteract();
+      // ?? replayer.enableInteract is not a function
+      // replayer.enableInteract();
     }, 1000);
   };
 

@@ -52,24 +52,49 @@ snapshot 用于将 DOM 及其状态转化为可序列化的数据结构并添加
 
 源码位置：packages/rrweb-snapshot/src/snapshot.ts
 
-serializeNode 针对不同的nodeType进行序列化处理
+serializeNode 针对不同的nodeType, tagName, attributes.type进行序列化处理
+
+> NodeType
+
+```ts
+export enum NodeType {
+  Document,
+  DocumentType,
+  Element,
+  Text,
+  CDATA,
+  Comment,
+}
+```
+
+> NodeType 为 Element 时的 tagName
+
+```text
+link
+style
+input
+textarea
+select
+option
+canvas
+audio
+video
+iframe
+```
+
+> 当tagName 是 input || textarea || select的 attributes.type
+
+```text
+radio
+checkbox
+submit
+button
+```
 
 ```ts
 function serializeNode(
   n: Node,
-  options: {
-    doc: Document;
-    blockClass: string | RegExp;
-    blockSelector: string | null;
-    maskTextClass: string | RegExp;
-    maskTextSelector: string | null;
-    inlineStylesheet: boolean;
-    maskInputOptions: MaskInputOptions;
-    maskTextFn: MaskTextFn | undefined;
-    maskInputFn: MaskInputFn | undefined;
-    recordCanvas: boolean;
-    keepIframeSrcFn: KeepIframeSrcFn;
-  },
+  options: {},
 ): serializedNode | false {
   const {
     doc,
@@ -280,9 +305,180 @@ function serializeNode(
 }
 ```
 
-
-
 ### 1.2. rebuild
+
+rebuild 则是将 snapshot 记录的数据结构重建为对应的 DOM。 
+
+源码位置：packages/rrweb-snapshot/src/rebuild.ts
+
+rebuild 函数主要调用了 buildNode 方法，不同类型的元素，调用createElement 创建 tagName 指定的 HTML。  
+
+```ts
+function buildNode(
+  n: serializedNodeWithId,
+  options: {},
+): Node | null {
+  const { doc, hackCss, cache } = options;
+  switch (n.type) {
+    case NodeType.Document:
+      return doc.implementation.createDocument(null, '', null);
+    case NodeType.DocumentType:
+      return doc.implementation.createDocumentType(
+        n.name || 'html',
+        n.publicId,
+        n.systemId,
+      );
+    case NodeType.Element:
+      const tagName = getTagName(n);
+      let node: Element;
+      if (n.isSVG) {
+        node = doc.createElementNS('http://www.w3.org/2000/svg', tagName);
+      } else {
+        node = doc.createElement(tagName);
+      }
+      for (const name in n.attributes) {
+        if (!n.attributes.hasOwnProperty(name)) {
+          continue;
+        }
+        let value = n.attributes[name];
+        if (tagName === 'option' && name === 'selected' && value === false) {
+          // legacy fix (TODO: if `value === false` can be generated for other attrs, should we also omit those other attrs from build?)
+          continue;
+        }
+        value =
+          typeof value === 'boolean' || typeof value === 'number' ? '' : value;
+        // attribute names start with rr_ are internal attributes added by rrweb
+        if (!name.startsWith('rr_')) {
+          const isTextarea = tagName === 'textarea' && name === 'value';
+          const isRemoteOrDynamicCss =
+            tagName === 'style' && name === '_cssText';
+          if (isRemoteOrDynamicCss && hackCss) {
+            value = addHoverClass(value, cache);
+          }
+          if (isTextarea || isRemoteOrDynamicCss) {
+            const child = doc.createTextNode(value);
+            // https://github.com/rrweb-io/rrweb/issues/112
+            for (const c of Array.from(node.childNodes)) {
+              if (c.nodeType === node.TEXT_NODE) {
+                node.removeChild(c);
+              }
+            }
+            node.appendChild(child);
+            continue;
+          }
+
+          try {
+            if (n.isSVG && name === 'xlink:href') {
+              node.setAttributeNS('http://www.w3.org/1999/xlink', name, value);
+            } else if (
+              name === 'onload' ||
+              name === 'onclick' ||
+              name.substring(0, 7) === 'onmouse'
+            ) {
+              // Rename some of the more common atttributes from https://www.w3schools.com/tags/ref_eventattributes.asp
+              // as setting them triggers a console.error (which shows up despite the try/catch)
+              // Assumption: these attributes are not used to css
+              node.setAttribute('_' + name, value);
+            } else if (
+              tagName === 'meta' &&
+              n.attributes['http-equiv'] === 'Content-Security-Policy' &&
+              name === 'content'
+            ) {
+              // If CSP contains style-src and inline-style is disabled, there will be an error "Refused to apply inline style because it violates the following Content Security Policy directive: style-src '*'".
+              // And the function insertStyleRules in rrweb replayer will throw an error "Uncaught TypeError: Cannot read property 'insertRule' of null".
+              node.setAttribute('csp-content', value);
+              continue;
+            } else if (
+              tagName === 'link' &&
+              n.attributes.rel === 'preload' &&
+              n.attributes.as === 'script'
+            ) {
+              // ignore
+            } else if (
+              tagName === 'link' &&
+              n.attributes.rel === 'prefetch' &&
+              typeof n.attributes.href === 'string' &&
+              n.attributes.href.endsWith('.js')
+            ) {
+              // ignore
+            } else {
+              node.setAttribute(name, value);
+            }
+          } catch (error) {
+            // skip invalid attribute
+          }
+        } else {
+          // handle internal attributes
+          if (tagName === 'canvas' && name === 'rr_dataURL') {
+            const image = document.createElement('img');
+            image.src = value;
+            image.onload = () => {
+              const ctx = (node as HTMLCanvasElement).getContext('2d');
+              if (ctx) {
+                ctx.drawImage(image, 0, 0, image.width, image.height);
+              }
+            };
+          }
+          if (name === 'rr_width') {
+            (node as HTMLElement).style.width = value;
+          }
+          if (name === 'rr_height') {
+            (node as HTMLElement).style.height = value;
+          }
+          if (name === 'rr_mediaCurrentTime') {
+            (node as HTMLMediaElement).currentTime = n.attributes
+              .rr_mediaCurrentTime as number;
+          }
+          if (name === 'rr_mediaState') {
+            switch (value) {
+              case 'played':
+                (node as HTMLMediaElement)
+                  .play()
+                  .catch((e) => console.warn('media playback error', e));
+                break;
+              case 'paused':
+                (node as HTMLMediaElement).pause();
+                break;
+              default:
+            }
+          }
+        }
+      }
+      if (n.isShadowHost) {
+        /**
+         * Since node is newly rebuilt, it should be a normal element
+         * without shadowRoot.
+         * But if there are some weird situations that has defined
+         * custom element in the scope before we rebuild node, it may
+         * register the shadowRoot earlier.
+         * The logic in the 'else' block is just a try-my-best solution
+         * for the corner case, please let we know if it is wrong and
+         * we can remove it.
+         */
+        if (!node.shadowRoot) {
+          node.attachShadow({ mode: 'open' });
+        } else {
+          while (node.shadowRoot.firstChild) {
+            node.shadowRoot.removeChild(node.shadowRoot.firstChild);
+          }
+        }
+      }
+      return node;
+    case NodeType.Text:
+      return doc.createTextNode(
+        n.isStyle && hackCss
+          ? addHoverClass(n.textContent, cache)
+          : n.textContent,
+      );
+    case NodeType.CDATA:
+      return doc.createCDATASection(n.textContent);
+    case NodeType.Comment:
+      return doc.createComment(n.textContent);
+    default:
+      return null;
+  }
+}
+```
 
 ## 2. rrweb
 
@@ -824,85 +1020,20 @@ function initObservers(
 }
 ```
 
-initMutationObserver
+initMutationObserver， 这里面主要用了MutationObserver.observe()，接收给定选项匹配的DOM变化的通知。API：https://developer.mozilla.org/zh-CN/docs/Web/API/MutationObserver/observe  
 
 ```ts
-function initMutationObserver(
-  cb: mutationCallBack,
-  doc: Document,
-  blockClass: blockClass,
-  blockSelector: string | null,
-  maskTextClass: maskTextClass,
-  maskTextSelector: string | null,
-  inlineStylesheet: boolean,
-  maskInputOptions: MaskInputOptions,
-  maskTextFn: MaskTextFn | undefined,
-  maskInputFn: MaskInputFn | undefined,
-  recordCanvas: boolean,
-  slimDOMOptions: SlimDOMOptions,
-  mirror: Mirror,
-  iframeManager: IframeManager,
-  shadowDomManager: ShadowDomManager,
-  rootEl: Node,
-): MutationObserver {
-  const mutationBuffer = new MutationBuffer();
-  mutationBuffers.push(mutationBuffer);
-  // see mutation.ts for details
-  mutationBuffer.init(
-    cb,
-    blockClass,
-    blockSelector,
-    maskTextClass,
-    maskTextSelector,
-    inlineStylesheet,
-    maskInputOptions,
-    maskTextFn,
-    maskInputFn,
-    recordCanvas,
-    slimDOMOptions,
-    doc,
-    mirror,
-    iframeManager,
-    shadowDomManager,
-  );
-  let mutationObserverCtor =
-    window.MutationObserver ||
-    /**
-     * Some websites may disable MutationObserver by removing it from the window object.
-     * If someone is using rrweb to build a browser extention or things like it, they
-     * could not change the website's code but can have an opportunity to inject some
-     * code before the website executing its JS logic.
-     * Then they can do this to store the native MutationObserver:
-     * window.__rrMutationObserver = MutationObserver
-     */
-    (window as WindowWithStoredMutationObserver).__rrMutationObserver;
-  const angularZoneSymbol = (window as WindowWithAngularZone)?.Zone?.__symbol__?.(
-    'MutationObserver',
-  );
-  if (
-    angularZoneSymbol &&
-    ((window as unknown) as Record<string, typeof MutationObserver>)[
-      angularZoneSymbol
-    ]
-  ) {
-    mutationObserverCtor = ((window as unknown) as Record<
-      string,
-      typeof MutationObserver
-    >)[angularZoneSymbol];
-  }
-  const observer = new mutationObserverCtor(
-    mutationBuffer.processMutations.bind(mutationBuffer),
-  );
-  observer.observe(rootEl, {
-    attributes: true,
-    attributeOldValue: true,
-    characterData: true,
-    characterDataOldValue: true,
-    childList: true,
-    subtree: true,
-  });
-  return observer;
-}
+const observer = new mutationObserverCtor(
+  mutationBuffer.processMutations.bind(mutationBuffer),
+);
+observer.observe(rootEl, {
+  attributes: true,
+  attributeOldValue: true,
+  characterData: true,
+  characterDataOldValue: true,
+  childList: true,
+  subtree: true,
+});
 ```
 
 MutationBuffer 的代码在 packages/rrweb/src/record/mutation.ts  

@@ -1,52 +1,14 @@
 import React, { useRef } from "react";
-import { Form, Input, Button, Select } from "antd";
+import { Button } from "antd";
 import { record, pack, getRecordConsolePlugin } from "rrweb";
 import RecordBtn from "../../components/recordBtn";
 import { db } from "../../models/db";
 import { LOGKEY } from "../../constants";
+import "./index.css";
 
-const { Option } = Select;
-
-const layout = {
-  labelCol: { span: 8 },
-  wrapperCol: { span: 16 },
-};
-const tailLayout = {
-  wrapperCol: { offset: 8, span: 16 },
-};
-
-const Demo1 = () => {
+const Demo5 = () => {
   let events = useRef([]);
-  const [form] = Form.useForm();
   let stopFn = useRef(null);
-
-  const onGenderChange = (value) => {
-    switch (value) {
-      case "male":
-        form.setFieldsValue({ note: "Hi, man!" });
-        return;
-      case "female":
-        form.setFieldsValue({ note: "Hi, lady!" });
-        return;
-      case "other":
-        form.setFieldsValue({ note: "Hi there!" });
-    }
-  };
-
-  const onFinish = (values) => {
-    console.log(values);
-  };
-
-  const onReset = () => {
-    form.resetFields();
-  };
-
-  const onFill = () => {
-    form.setFieldsValue({
-      note: "Hello world!",
-      gender: "male",
-    });
-  };
 
   const startRecord = () => {
     stopFn.current = record({
@@ -100,60 +62,38 @@ const Demo1 = () => {
     <div>
       <h1>录制console</h1>
       <RecordBtn startRecord={startRecord} endRecord={endRecord} />
-      <Form {...layout} form={form} name="control-hooks" onFinish={onFinish}>
-        <Form.Item name="note" label="Note" rules={[{ required: true }]}>
-          <Input />
-        </Form.Item>
-        <Form.Item name="gender" label="Gender" rules={[{ required: true }]}>
-          <Select
-            placeholder="Select a option and change input text above"
-            onChange={onGenderChange}
-            allowClear
-          >
-            <Option value="male">male</Option>
-            <Option value="female">female</Option>
-            <Option value="other">other</Option>
-          </Select>
-        </Form.Item>
-        <Form.Item
-          noStyle
-          shouldUpdate={(prevValues, currentValues) =>
-            prevValues.gender !== currentValues.gender
-          }
-        >
-          {({ getFieldValue }) =>
-            getFieldValue("gender") === "other" ? (
-              <Form.Item
-                name="customizeGender"
-                label="Customize Gender"
-                rules={[{ required: true }]}
-              >
-                <Input />
-              </Form.Item>
-            ) : null
-          }
-        </Form.Item>
-        <Form.Item {...tailLayout}>
-          <Button type="primary" htmlType="submit">
-            Submit
-          </Button>
-          <Button htmlType="button" onClick={onReset}>
-            Reset
-          </Button>
-          <Button type="link" htmlType="button" onClick={onFill}>
-            Fill form
-          </Button>
-          <Button
-            type="primary"
-            danger
-            onClick={() => console.warn("warn!!!!")}
-          >
-            console warn
-          </Button>
-        </Form.Item>
-      </Form>
+
+      <Button
+        className="btn"
+        onClick={() => console.log("info!!!!")}
+      >
+        console.info
+      </Button>
+      <Button
+        type="primary"
+        className="btn"
+        onClick={() => console.log("log!!!!")}
+      >
+        console.log
+      </Button>
+      
+      <Button
+        className="btn"
+        danger
+        onClick={() => console.warn("warn!!!!")}
+      >
+        console.warn
+      </Button>
+      <Button
+        type="primary"
+        className="btn"
+        danger
+        onClick={() => console.error("error!!!!")}
+      >
+        console.error
+      </Button>
     </div>
   );
 };
 
-export default Demo1;
+export default Demo5;
